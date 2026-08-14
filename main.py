@@ -1,37 +1,46 @@
+from typing import List
+
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
-from langchain_openai import ChatOpenAI
-from langchain_ollama import ChatOllama
 
 load_dotenv()
+from langchain.agents import create_agent
+from langchain.tools import tool
+from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
+from langchain_tavily import TavilySearch
+
+
+class Source(BaseModel):
+    """Schema for a source used by the agent"""
+
+    url: str = Field(description="The URL of the source")
+
+
+class AgentResponse(BaseModel):
+    """Schema for agent response with answer and sources"""
+
+    answer: str = Field(description="Thr agent's answer to the query")
+    sources: List[Source] = Field(
+        default_factory=list, description="List of sources used to generate the answer"
+    )
+
+
+llm = ChatOpenAI(model="gpt-5")
+tools = [TavilySearch()]
+agent = create_agent(model=llm, tools=tools, response_format=AgentResponse)
 
 
 def main():
     print("Hello from langchain-course!")
-
-    information = """
-    Elon Musk (born June 28, 1971) is a businessman and former public official who is the CEO and largest shareholder of Tesla and SpaceX. Musk has been the wealthiest person in the world since 2025, and became the only trillionaire in terms of US dollars in June 2026; as of August 8, 2026, Forbes estimates his net worth to be US$823 billion.
-    """
-
-    summary_template = """
-    given the information {information} about a person I want you to create:
-    1. A short summary
-    2. Two interesting facts about them
-    """
-
-    summary_prompt_template = PromptTemplate(
-        input_variables=["information"], template=summary_template
+    result = agent.invoke(
+        {
+            "messages": HumanMessage(
+                content="search for 3 job postings for an ai engineer using langchain in the bay area on linkedin and list their details?"
+            )
+        }
     )
-
-    # Temperature is the randomness of the model's output. 0 means no randomness. 1 means full randomness.
-    llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
-    # llm  = ChatOllama(temperature=0, model="gemma3:270m")
-    # runnable object is a chain of prompts and models. It is a callable object that can be invoked to get a response.
-    # | is a pipe operator. It means the output of the summary_prompt_template is the input of the llm.
-    chain = summary_prompt_template | llm
-
-    response = chain.invoke(input={"information": information})
-    print(response.content)
+    print(result)
 
 
 if __name__ == "__main__":
