@@ -102,13 +102,13 @@ def run_agent(question: str):
             if tool_to_use is None:
                 observation = f"Error: Tool '{tool_name}' not found."
                 print(f" >> [Tool Observation] {observation}")
-                messages.append(ToolMessage(content=observation, tool_call_id=tool_call_id))
-                continue
             else:
                 # Invoke the selected tool with the provided arguments
                 observation = tool_to_use.invoke(tool_args)
                 print(f" >> [Tool Observation] {observation}")
-                messages.append(ToolMessage(content=str(observation), tool_call_id=tool_call_id))
+            
+            # Append the tool's observation to the conversation history so the LLM can see it in the next iteration
+            messages.append(ToolMessage(content=str(observation), tool_call_id=tool_call_id))
 
     print("Error: Maximum iterations reached without a final answer.")
     return None
